@@ -1,10 +1,10 @@
-package payment
+package product
 
 import "time"
 
-type Payment struct {
+type Product struct {
 	ID        int       `json:"id"`
-	productId int       `json:"productId"`
+	Name      string    `json:"name"`
 	Price     string    `json:"price"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
