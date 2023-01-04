@@ -1,11 +1,15 @@
 package payment
 
-import "time"
+import (
+	"github.com/RamisL/server/product"
+	"time"
+)
 
 type Payment struct {
-	ID        int       `json:"id"`
-	productId int       `json:"product_id"`
-	pricePaid string    `json:"price_paid"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        int             `json:"id" gorm:"primaryKey;autoIncrement:true"`
+	ProductId int             `json:"product_id"`
+	Product   product.Product `json:"product" gorm:"foreignKey:ProductId;references:ID"`
+	PricePaid string          `json:"price_paid"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
 }
