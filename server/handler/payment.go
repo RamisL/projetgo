@@ -29,7 +29,7 @@ func NewPaymentHandler(paymentService payment.Service, broadcaster broadcast.Bro
 func (th *paymentHandler) CreatePayment(c *gin.Context) {
 	// Get json body
 
-	var input payment.InputCreatePayment
+	var input payment.InputPayment
 
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
@@ -120,7 +120,7 @@ func (th *paymentHandler) UpdatePayment(c *gin.Context) {
 	}
 
 	// Get json body
-	var input payment.InputUpdatePayment
+	var input payment.InputPayment
 	err = c.ShouldBindJSON(&input)
 	if err != nil {
 		response := &paymentResponse{

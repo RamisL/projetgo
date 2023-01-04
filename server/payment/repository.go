@@ -7,16 +7,15 @@ import (
 	"os"
 
 	"github.com/RamisL/server/product"
-	product2 "github.com/RamisL/server/product"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 type Repository interface {
-	CreatePayment(payment Payment) (Payment, error)
+	CreatePayment(input InputPayment) (Payment, error)
 	GetAllPayment() ([]Payment, error)
 	GetByIdPayment(id int) (Payment, error)
-	UpdatePayment(id int, input InputUpdatePayment) (Payment, error)
+	UpdatePayment(id int, input InputPayment) (Payment, error)
 	DeletePayment(id int) error
 }
 
@@ -27,10 +26,15 @@ type repository struct {
 func NewRepository(db *gorm.DB) *repository {
 	return &repository{db}
 }
-func (r *repository) CreatePayment(payment Payment) (Payment, error) {
-
+func (r *repository) CreatePayment(input InputPayment) (Payment, error) {
+	var payment Payment
 	var product product.Product
-	r.db.Where("id = ?", payment.ProductID).First(&product)
+
+	r.db.Select("price").Find(&product).Where("id = ?", input.ProductId).Scan(&product)
+	payment.ProductId = input.ProductId
+	payment.PricePaid = product.Price
+
+	r.db.Where("id = ?", payment.ProductId).First(&product)
 
 	payment.Product = product
 
@@ -48,7 +52,7 @@ func (r *repository) GetAllPayment() ([]Payment, error) {
 	}
 	for key, payment := range payments {
 		var product product.Product
-		r.db.Where("id = ?", payment.ProductID).First(&product)
+		r.db.Where("id = ?", payment.ProductId).First(&product)
 		fmt.Println(product)
 		payments[key].Product = product
 
@@ -65,15 +69,15 @@ func (r *repository) GetByIdPayment(id int) (Payment, error) {
 		return payment, err
 	}
 
-	r.db.Where("id = ?", payment.ProductID).First(&product)
+	r.db.Where("id = ?", payment.ProductId).First(&product)
 	payment.PricePaid = product.Price
-	payment.ProductID = product.ID
+	payment.ProductId = product.ID
 	payment.Product = product
 
 	return payment, nil
 }
 
-func (r *repository) UpdatePayment(id int, input InputUpdatePayment) (Payment, error) {
+func (r *repository) UpdatePayment(id int, input InputPayment) (Payment, error) {
 	payment, err := r.GetByIdPayment(id)
 	if err != nil {
 		return payment, err
@@ -87,16 +91,13 @@ func (r *repository) UpdatePayment(id int, input InputUpdatePayment) (Payment, e
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	var product product2.Product
+	var product product.Product
 
-	db.Where("id = ?", payment.ProductID).First(&product)
+	db.Where("id = ?", input.ProductId).First(&product)
 	payment.Product = product
 
-	payment.PricePaid = input.Price
-	payment.Product.Name = input.Name
-	payment.Product.Price = input.Price
-	product.Name = input.Name
-	product.Price = input.Price
+	payment.ProductId = input.ProductId
+	payment.PricePaid = product.Price
 
 	r.db.Save(&product)
 	err = r.db.Save(&payment).Error
