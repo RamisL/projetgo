@@ -1,10 +1,14 @@
 package handler
 
 import (
-	"github.com/RamisL/server/payment"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/RamisL/server/adapter"
+	"github.com/RamisL/server/broadcast"
+	"github.com/RamisL/server/payment"
+
+	"github.com/gin-gonic/gin"
 )
 
 type paymentResponse struct {
@@ -15,16 +19,17 @@ type paymentResponse struct {
 
 type paymentHandler struct {
 	paymentService payment.Service
+	broadcaster    broadcast.Broadcaster
 }
 
-func NewPaymentHandler(paymentService payment.Service) *paymentHandler {
-	return &paymentHandler{paymentService}
+func NewPaymentHandler(paymentService payment.Service, broadcaster broadcast.Broadcaster) *paymentHandler {
+	return &paymentHandler{paymentService, broadcaster}
 }
 
 func (th *paymentHandler) CreatePayment(c *gin.Context) {
 	// Get json body
 
-	var input payment.InputPayment
+	var input payment.InputCreatePayment
 
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
@@ -47,6 +52,12 @@ func (th *paymentHandler) CreatePayment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
+
+	th.broadcaster.Submit(adapter.MessageInput{
+		Text:  "New payment received",
+		Name:  newPayment.Product.Name,
+		Price: newPayment.Product.Price,
+	})
 
 	response := &paymentResponse{
 		Success: true,
@@ -109,7 +120,7 @@ func (th *paymentHandler) UpdatePayment(c *gin.Context) {
 	}
 
 	// Get json body
-	var input payment.InputPayment
+	var input payment.InputUpdatePayment
 	err = c.ShouldBindJSON(&input)
 	if err != nil {
 		response := &paymentResponse{
@@ -132,10 +143,42 @@ func (th *paymentHandler) UpdatePayment(c *gin.Context) {
 		return
 	}
 
+	th.broadcaster.Submit(adapter.MessageInput{
+		Text:  "Payment Updated",
+		Name:  uPayment.Product.Name,
+		Price: uPayment.Product.Price,
+	})
+
 	response := &paymentResponse{
 		Success: true,
-		Message: "Update product created",
+		Message: "Update Payment created",
 		Data:    uPayment,
 	}
 	c.JSON(http.StatusCreated, response)
+}
+func (th *paymentHandler) DeletePayment(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, &paymentResponse{
+			Success: false,
+			Message: "Wrong id parameter",
+			Data:    err.Error(),
+		})
+		return
+	}
+
+	err = th.paymentService.DeletePayment(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, &paymentResponse{
+			Success: false,
+			Message: "Something went wrong",
+			Data:    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, &paymentResponse{
+		Success: true,
+		Message: "Payment successfully deleted",
+	})
 }

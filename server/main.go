@@ -1,14 +1,17 @@
 package main
 
 import (
+	"log"
+	"os"
+
+	"github.com/RamisL/server/adapter"
+	"github.com/RamisL/server/broadcast"
 	"github.com/RamisL/server/handler"
 	"github.com/RamisL/server/payment"
 	"github.com/RamisL/server/product"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
-	"os"
 )
 
 //var pl = fmt.Println
@@ -32,7 +35,9 @@ func main() {
 
 	paymentRepository := payment.NewRepository(db)
 	paymentService := payment.NewService(paymentRepository)
-	paymentHandler := handler.NewPaymentHandler(paymentService)
+	broadcaster := broadcast.NewBroadcaster(20)
+	paymentHandler := handler.NewPaymentHandler(paymentService, broadcaster)
+	adapter := adapter.NewGinAdapter(broadcaster, paymentService)
 
 	r := gin.Default()
 	api := r.Group("/api")
@@ -41,6 +46,8 @@ func main() {
 			"message": "pong",
 		})
 	})
+
+	api.GET("/stream", adapter.Stream)
 
 	api.POST("/product/create", productHandler.CreateProduct)
 	api.GET("/product/showAll", productHandler.GetAllProduct)
@@ -52,6 +59,7 @@ func main() {
 	api.GET("/payment/showAll", paymentHandler.GetAllPayment)
 	api.GET("/payment/show/:id", paymentHandler.GetByIdPayment)
 	api.PUT("/payment/update/:id", paymentHandler.UpdatePayment)
+	api.DELETE("/payment/delete/:id", paymentHandler.DeletePayment)
 
 	r.Run(":3000")
 }

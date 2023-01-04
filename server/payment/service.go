@@ -9,10 +9,11 @@ import (
 )
 
 type Service interface {
-	CreatePayment(input InputPayment) (Payment, error)
+	CreatePayment(input InputCreatePayment) (Payment, error)
 	GetAllPayment() ([]Payment, error)
 	GetByIdPayment(id int) (Payment, error)
-	UpdatePayment(id int, input InputPayment) (Payment, error)
+	UpdatePayment(id int, input InputUpdatePayment) (Payment, error)
+	DeletePayment(id int) error
 }
 
 type service struct {
@@ -22,7 +23,7 @@ type service struct {
 func NewService(r Repository) *service {
 	return &service{r}
 }
-func (s *service) CreatePayment(input InputPayment) (Payment, error) {
+func (s *service) CreatePayment(input InputCreatePayment) (Payment, error) {
 	var payment Payment
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
@@ -36,7 +37,7 @@ func (s *service) CreatePayment(input InputPayment) (Payment, error) {
 	var product product2.Product
 
 	db.Select("price").Find(&product).Where("id = ?", input.ProductId).Scan(&product)
-	payment.ProductId = input.ProductId
+	payment.ProductID = input.ProductId
 	payment.PricePaid = product.Price
 
 	newPayment, err := s.repository.CreatePayment(payment)
@@ -63,11 +64,19 @@ func (s *service) GetByIdPayment(id int) (Payment, error) {
 
 	return payment, nil
 }
-func (s *service) UpdatePayment(id int, input InputPayment) (Payment, error) {
+func (s *service) UpdatePayment(id int, input InputUpdatePayment) (Payment, error) {
 	uPayment, err := s.repository.UpdatePayment(id, input)
 	if err != nil {
 		return uPayment, err
 	}
 
 	return uPayment, nil
+}
+func (s *service) DeletePayment(id int) error {
+	err := s.repository.DeletePayment(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
